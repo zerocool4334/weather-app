@@ -1,35 +1,98 @@
-// Create this as a NEW file
-import axios from 'axios';
+import axios from 'axios'
 
-export const getWeather = async (city) => {
-  try {
-    const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${city}&count=1`;
-    const geoResponse = await axios.get(geoUrl);
-    
-    if (!geoResponse.data.results?.[0]) {
-      throw new Error('City not found');
-    }
-    
-    const { latitude, longitude } = geoResponse.data.results[0];
-    
-    const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code&timezone=auto`;
-    const weatherResponse = await axios.get(weatherUrl);
-    
-    // Weather code to icon mapping
-    const getWeatherIcon = (code) => {
-      if (code === 0) return '☀️';
-      if (code <= 3) return '🌤️';
-      if (code <= 67) return '🌧️';
-      if (code <= 86) return '🌨️';
-      return '⛈️';
-    };
-    
-    return {
-      temperature: Math.round(weatherResponse.data.current.temperature_2m),
-      condition: weatherResponse.data.current.weather_code,
-      icon: getWeatherIcon(weatherResponse.data.current.weather_code)
-    };
-  } catch (error) {
-    throw new Error('Failed to fetch weather data');
+const GEO_URL = 'https://geocoding-api.open-meteo.com/v1/search'
+const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast'
+
+export const WEATHER_CODES = {
+  0: 'Clear sky',
+  1: 'Mainly clear',
+  2: 'Partly cloudy',
+  3: 'Overcast',
+  45: 'Fog',
+  48: 'Depositing rime fog',
+  51: 'Light drizzle',
+  53: 'Moderate drizzle',
+  55: 'Dense drizzle',
+  56: 'Light freezing drizzle',
+  57: 'Dense freezing drizzle',
+  61: 'Slight rain',
+  63: 'Moderate rain',
+  65: 'Heavy rain',
+  66: 'Light freezing rain',
+  67: 'Heavy freezing rain',
+  71: 'Slight snow fall',
+  73: 'Moderate snow fall',
+  75: 'Heavy snow fall',
+  77: 'Snow grains',
+  80: 'Slight rain showers',
+  81: 'Moderate rain showers',
+  82: 'Violent rain showers',
+  85: 'Slight snow showers',
+  86: 'Heavy snow showers',
+  95: 'Thunderstorm',
+  96: 'Thunderstorm with slight hail',
+  99: 'Thunderstorm with heavy hail',
+}
+
+export const getWeatherDescription = (code) => WEATHER_CODES[code] || 'Unknown'
+
+export const getWeatherIcon = (code) => {
+  if (code === 0) return '☀️'
+  if (code <= 3) return '⛅'
+  if (code <= 48) return '🌫️'
+  if (code <= 57) return '🌦️'
+  if (code <= 67) return '🌧️'
+  if (code <= 77) return '❄️'
+  if (code <= 82) return '🌧️'
+  if (code <= 86) return '🌨️'
+  return '⛈️'
+}
+
+export async function fetchWeatherByCity(city) {
+  const geoRes = await axios.get(GEO_URL, {
+    params: { name: city, count: 1, language: 'en', format: 'json' },
+  })
+
+  const place = geoRes.data.results?.[0]
+  if (!place) throw new Error('City not found')
+
+  const weatherRes = await axios.get(WEATHER_URL, {
+    params: {
+      latitude: place.latitude,
+      longitude: place.longitude,
+      current:
+        'temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,pressure_msl',
+      daily: 'weather_code,temperature_2m_max,temperature_2m_min',
+      timezone: 'auto',
+      forecast_days: 7,
+    },
+  })
+
+  return {
+    city: place.name,
+    country: place.country,
+    countryCode: place.country_code,
+    latitude: place.latitude,
+    longitude: place.longitude,
+    current: weatherRes.data.current,
+    daily: weatherRes.data.daily,
   }
-};
+}
+
+export async function fetchWeatherByCoords(lat, lon) {
+  const weatherRes = await axios.get(WEATHER_URL, {
+    params: {
+      latitude: lat,
+      longitude: lon,
+      current:
+        'temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,pressure_msl',
+      daily: 'weather_code,temperature_2m_max,temperature_2m_min',
+      timezone: 'auto',
+      forecast_days: 7,
+    },
+  })
+  return {
+    current: weatherRes.data.current,
+    daily: weatherRes.data.daily,
+  }
+}

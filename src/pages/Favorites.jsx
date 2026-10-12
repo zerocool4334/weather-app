@@ -1,135 +1,61 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import WeatherCard from '../components/WeatherCard';
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { getFavorites, removeFavorite } from '../services/favorites'
 
-const Favorites = () => {
-  const [favorites, setFavorites] = useState([]);
-  const [weatherData, setWeatherData] = useState({});
-  const [loading, setLoading] = useState(true);
+export default function Favorites() {
+  const [favorites, setFavorites] = useState([])
 
   useEffect(() => {
-    const savedFavorites = JSON.parse(localStorage.getItem('favoriteCities') || '[]');
-    setFavorites(savedFavorites);
+    setFavorites(getFavorites())
+  }, [])
 
-    const fetchFavoritesWeather = async () => {
-      setLoading(true);
-      const data = {};
-      
-      for (const city of savedFavorites) {
-        try {
-          const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${city}&count=1`;
-          const geoResponse = await fetch(geoUrl);
-          const geoData = await geoResponse.json();
-          
-          if (!geoData.results?.[0]) {
-            throw new Error('City not found');
-          }
-          
-          const { latitude, longitude, name, country } = geoData.results[0];
-          
-          const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,pressure_msl&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`;
-          const weatherResponse = await fetch(weatherUrl);
-          const weatherData = await weatherResponse.json();
-          
-          data[city] = {
-            city: name,
-            country: country,
-            latitude: latitude,
-            longitude: longitude,
-            current: weatherData.current,
-            daily: weatherData.daily
-          };
-        } catch (error) {
-          console.error(`Error fetching weather for ${city}:`, error);
-          data[city] = null;
-        }
-      }
-      
-      setWeatherData(data);
-      setLoading(false);
-    };
-
-    if (savedFavorites.length > 0) {
-      fetchFavoritesWeather();
-    } else {
-      setLoading(false);
-    }
-  }, []);
-
-  const removeFavorite = (cityName) => {
-    const updatedFavorites = favorites.filter(city => city !== cityName);
-    setFavorites(updatedFavorites);
-    setWeatherData(prev => {
-      const newData = { ...prev };
-      delete newData[cityName];
-      return newData;
-    });
-    localStorage.setItem('favoriteCities', JSON.stringify(updatedFavorites));
-  };
-
-  if (loading) {
-    return (
-      <div className="pt-4 pb-8">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-3xl font-bold mb-4 text-white">Favorite Cities</h1>
-          <div className="text-white">Loading weather data...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (favorites.length === 0) {
-    return (
-      <div className="pt-4 pb-8">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-3xl font-bold mb-4 text-white">Favorite Cities</h1>
-          <p className="text-gray-200">No favorite cities yet. Add some from the Cities page!</p>
-          <Link to="/cities" className="text-blue-300 hover:underline mt-4 inline-block">
-            Browse Cities
-          </Link>
-        </div>
-      </div>
-    );
+  const handleRemove = (name) => {
+    setFavorites(removeFavorite(name))
   }
 
   return (
-    <div className="pb-8 md:pt-4">
-      <div className="container mx-auto px-4">
-        <h1 className="text-3xl font-bold text-center mb-8 text-white">Favorite Cities</h1>
-        
-        <div className="space-y-6 max-w-4xl mx-auto">
-          {favorites.map((city) => (
-            <div key={city} className="relative">
-              <button
-                onClick={() => removeFavorite(city)}
-                className="absolute top-4 right-4 z-10 bg-red-500 hover:bg-red-700 text-white rounded-full w-8 h-8 flex items-center justify-center"
-                style={{ transform: 'translate(50%, -50%)' }}
-              >
-                ✕
-              </button>
-              
-              <div className="weather-card-wrapper">
-                {weatherData[city] ? (
-                  <WeatherCard weatherData={weatherData[city]} />
-                ) : (
-                  <div className="weather-card">
-                    <h2 className="text-xl font-semibold text-white capitalize">{city}</h2>
-                    <p className="text-gray-200 mt-2">Weather data unavailable</p>
-                    <Link 
-                      to={`/city/${city.toLowerCase().replace(/\s+/g, '-')}`}
-                      className="text-blue-300 hover:underline mt-4 inline-block"
-                    >
-                      View details anyway →
-                    </Link>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
+    <div className="max-w-4xl mx-auto px-4 pt-10 pb-16">
+      <h1 className="text-3xl sm:text-4xl font-extrabold text-center">
+        ❤️ Your Favorites
+      </h1>
 
-export default Favorites;
+      {favorites.length === 0 ? (
+        <div className="text-center mt-10">
+          <p className="text-white/60">
+            You haven't added any cities yet.
+          </p>
+          <Link
+            to="/"
+            className="inline-block mt-4 px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 font-semibold hover:from-sky-400 hover:to-indigo-400 transition"
+          >
+            Search a city
+          </Link>
+        </div>
+      ) : (
+        <ul className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {favorites.map((fav) => (
+            <li
+              key={fav.name}
+              className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10"
+            >
+              <Link
+                to={`/city/${encodeURIComponent(fav.name)}`}
+                className="flex-1 hover:text-sky-300 transition"
+              >
+                <p className="font-semibold">{fav.name}</p>
+                <p className="text-xs text-white/50">{fav.country}</p>
+              </Link>
+              <button
+                type="button"
+                onClick={() => handleRemove(fav.name)}
+                className="text-sm text-red-300 hover:text-red-200 px-3 py-1 rounded-lg hover:bg-red-500/10 transition"
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}

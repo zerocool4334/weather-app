@@ -1,44 +1,39 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom'
 
-const Header = () => {
-  const location = useLocation();
+const navLinkClass = ({ isActive }) =>
+  `px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+    isActive
+      ? 'bg-white/15 text-white'
+      : 'text-white/70 hover:text-white hover:bg-white/10'
+  }`
 
-  const isActive = (path) => location.pathname === path;
-
+export default function Header() {
   return (
-    <nav className="navbar">
-      <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center">
-          <Link to="/" className="text-2xl font-bold gradient-text">
-            🌤️ WeatherApp
-          </Link>
-          
-          <div className="flex space-x-6">
-            <Link 
-              to="/" 
-              className={`nav-link ${isActive('/') ? 'active' : ''}`}
-            >
-              <span className="text-white">Home</span>
-            </Link>
-            
-            <Link 
-              to="/cities" 
-              className={`nav-link ${isActive('/cities') ? 'active' : ''}`}
-            >
-              <span className="text-white">Cities</span>
-            </Link>
-            
-            <Link 
-              to="/favorites" 
-              className={`nav-link ${isActive('/favorites') ? 'active' : ''}`}
-            >
-              <span className="text-white">❤️ Favorites</span>
-            </Link>
-          </div>
-        </div>
-      </div>
-    </nav>
-  );
-};
+    <header className="sticky top-0 z-20 backdrop-blur-md bg-slate-900/60 border-b border-white/10">
+      <nav className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+        <Link
+          to="/"
+          className="flex items-center gap-2 text-xl font-extrabold tracking-tight"
+        >
+          <span className="text-2xl">🌤️</span>
+          <span className="bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">
+            WeatherApp
+          </span>
+        </Link>
 
-export default Header;
+        <div className="flex items-center gap-1 sm:gap-2">
+          <NavLink to="/" end className={navLinkClass}>
+            Home
+          </NavLink>
+          <NavLink to="/cities" className={navLinkClass}>
+            Cities
+          </NavLink>
+          <NavLink to="/favorites" className={navLinkClass}>
+            <span aria-hidden>❤️</span>
+            <span className="hidden sm:inline ml-1">Favorites</span>
+          </NavLink>
+        </div>
+      </nav>
+    </header>
+  )
+}

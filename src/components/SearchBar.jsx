@@ -1,55 +1,47 @@
 import { useState } from 'react'
-import axios from 'axios'
+import { fetchWeatherByCity } from '../services/weatherApi'
 
-const SearchBar = ({ setWeatherData, setLoading, setError }) => {
+export default function SearchBar({ onResult, onLoading, onError }) {
   const [city, setCity] = useState('')
 
-  const fetchWeather = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!city.trim()) return
-    
-    setLoading(true)
-    setError('')
-    
+    const query = city.trim()
+    if (!query) return
+
+    onLoading?.(true)
+    onError?.('')
+
     try {
-      const geocodingUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${city}&count=1`
-      const geoResponse = await axios.get(geocodingUrl)
-      
-      if (!geoResponse.data.results?.[0]) {
-        throw new Error('City not found')
-      }
-      
-      const { latitude, longitude, name, country } = geoResponse.data.results[0]
-      
-      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,pressure_msl&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`
-      const weatherResponse = await axios.get(weatherUrl)
-      
-      setWeatherData({
-        city: name,
-        country: country,
-        latitude: latitude,
-        longitude: longitude,
-        current: weatherResponse.data.current,
-        daily: weatherResponse.data.daily
-      })
-    } catch (err) {
-      setError('City not found. Please try again.')
+      const data = await fetchWeatherByCity(query)
+      onResult?.(data)
+    } catch {
+      onError?.('City not found. Please try another name.')
     } finally {
-      setLoading(false)
+      onLoading?.(false)
     }
   }
 
   return (
-    <form onSubmit={fetchWeather} className="search-bar">
+    <form
+      onSubmit={handleSubmit}
+      className="flex gap-2 w-full max-w-xl mx-auto"
+      role="search"
+    >
       <input
         type="text"
-        placeholder="Enter city name"
+        aria-label="City name"
+        placeholder="Search a city… e.g. Damascus, Paris, Tokyo"
         value={city}
         onChange={(e) => setCity(e.target.value)}
+        className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-white placeholder-white/50 outline-none focus:ring-2 focus:ring-sky-400/60 focus:border-transparent transition"
       />
-      <button type="submit">Search</button>
+      <button
+        type="submit"
+        className="px-5 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 font-semibold text-white shadow-lg shadow-sky-500/20 hover:from-sky-400 hover:to-indigo-400 active:scale-[0.98] transition"
+      >
+        Search
+      </button>
     </form>
   )
 }
-
-export default SearchBar
